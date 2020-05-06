@@ -1,0 +1,22 @@
+{
+    "manifest_version": 2,
+    "name": "Taba",
+    "version": "1.0",    
+    "description": "Pack of all your tabs neatly and nicely inside one!",
+    "background": {
+      "scripts": ["background.js"],
+      "persistent": false
+    },
+    "content_scripts":
+    [
+        {
+            "matches": ["file:///index.html"],            
+            "css": ["style.css"],
+            "js": ["content.js"]            
+       }
+    ],
+    "browser_action": {},
+    "permissions": ["tabs", "storage", "windows"],
+    "content_security_policy":"script-src 'self' https://momentjs.com/downloads/moment.min.js; object-src 'self'"
+    
+}
