@@ -1,8 +1,6 @@
 const main = chrome.extension.getURL('index.html');
 
 chrome.browserAction.onClicked.addListener(() => {
-    // chrome.storage.local.set({"sessions": []});
-    // return;
 	// Get all tabs in all windows
     chrome.tabs.query({currentWindow: true}, tabs => {
         // Check if main (index.html) exists in any of the tabs
