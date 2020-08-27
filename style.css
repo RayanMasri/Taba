@@ -1,0 +1,75 @@
+body {
+  background-color: gray;
+}
+
+#header {
+  border-bottom: 1px dashed rgb(221, 221, 221);
+  position: relative;
+  top: 0;
+  left: 0;
+  color: black;
+  font-weight: 500;
+  font-size: 18px;
+  font-family: "Candara";
+}
+
+.session-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: -25px;
+}
+
+.session-header > * {
+  padding-right: 5px;
+}
+
+.session-title {
+  font-size: 25px;
+}
+
+.session-date {
+  opacity: 0.5;
+  font-size: 13px;
+}
+
+
+.session-tabs {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;  
+}
+
+.session-tabs > * {
+  margin-bottom: -15px;
+
+  color: lightgray;
+  transition: 0.2s;
+}
+
+.session-tabs > *:hover {
+  color: white;
+}
+
+.session-tabs > *:active {
+  color: white;
+}
+
+
+/* 
+.session-tabs {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+ 
+.session-tabs > * {
+  font-size: 18px;
+  background-color: gray;
+  color: lightgray;
+  transition: 0.2s;
+}
+
+.session-tabs > *:hover {
+  color: white;
+} */
