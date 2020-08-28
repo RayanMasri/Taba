@@ -1,8 +1,8 @@
 const main = chrome.extension.getURL('index.html');
 
 chrome.browserAction.onClicked.addListener(() => {
-    chrome.storage.local.set({"sessions": []});
-    return;
+    // chrome.storage.local.set({"sessions": []});
+    // return;
 	// Get all tabs in all windows
     chrome.tabs.query({currentWindow: true}, tabs => {
         // Check if main (index.html) exists in any of the tabs
@@ -34,38 +34,41 @@ chrome.browserAction.onClicked.addListener(() => {
                     return tab;
                 }
             }
-        })        
+        })     
         
         // group.map((tab, index) => {
         //     let domain = new URL(tab.url || tab.pendingUrl).hostname;
         //     console.log(`Tab ${domain} at index ${index}`);
         // })
 
-        // Load local sessions
-        chrome.storage.local.get(["sessions"], result => {
-            let sessions = result["sessions"] || [];
-
-            // Get current time
-            let date = new Date();
-            let time = {
-                hours: date.getHours() > 12 ? date.getHours() - 12 : date.getHours(),
-                minutes: date.getMinutes().toString().padStart(2, '0'),
-                period: date.getHours() >= 12 ? 'PM' : 'AM',
-                day: date.getDay(),
-                month: date.getDate(),
-                year: date.getFullYear()
-            }
-            time = `${time.hours}:${time.minutes} ${time.period} ${time.day}/${time.month}/${time.year}`;
-
-            // Push current session
-            sessions.push({
-                group: group,
-                time: time,
-                title: "title"  
+        // Check if group isn't empty
+        if(group.length) {
+            // Load local sessions
+            chrome.storage.local.get(["sessions"], result => {
+                let sessions = result["sessions"] || [];
+    
+                // Get current time
+                let date = new Date();
+                let time = {
+                    hours: date.getHours() > 12 ? date.getHours() - 12 : date.getHours(),
+                    minutes: date.getMinutes().toString().padStart(2, '0'),
+                    period: date.getHours() >= 12 ? 'PM' : 'AM',
+                    day: date.getDate(),
+                    month: date.getMonth() + 1,
+                    year: date.getFullYear()
+                }
+                time = `${time.hours}:${time.minutes} ${time.period} ${time.month}/${time.day}/${time.year}`;
+    
+                // Push current session
+                sessions.push({
+                    group: group,
+                    time: time,
+                    title: "title"  
+                });
+    
+                // Save current sessions
+                chrome.storage.local.set({"sessions": sessions})
             });
-
-            // Save current sessions
-            chrome.storage.local.set({"sessions": sessions})
-        });
+        }
 	});
 });

@@ -21,7 +21,8 @@ class Element {
 
     // Returns the index of a child node
     indexof(element, parent) {
-        let index = Array.from(parent.children).indexOf(element);
+        console.log(element.parentNode);
+        let index = Array.from(element.parentNode.children).indexOf(element);
         return index;
     }
 
@@ -60,7 +61,7 @@ class Tab extends Element {
 
             // Remove current tab
             let [session, index] = this.session;
-            sessions[index].group.splice(this.indexof(this.element, this.parent), 1);
+            sessions[index].group.splice(this.indexof(this.element), 1);
 
             // Save new sessions
             chrome.storage.local.set({"sessions": sessions}, () => {
@@ -71,7 +72,6 @@ class Tab extends Element {
 
     render(parent) {  
         // Create link & link container
-        this.parent = parent;
         this.element = this.create({ tag: "div", parent: parent });  
                 
         let text = this.create({ tag: "p", text: this.domain, parent: this.element });
