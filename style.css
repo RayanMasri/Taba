@@ -10,11 +10,24 @@ p {
   user-select:none;
 }
 
+#main-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.session {
+  /* session spacing */
+  /* background-color: green; */
+  padding-bottom: 15px;
+}
+
 .session-header {
   display: flex;
   flex-direction: row;
   align-items: center;
-  margin-bottom: -25px;
+  height: 25px;
+  /* background-color: lightgreen; */
 }
 
 .session-header > * {
@@ -37,7 +50,15 @@ p {
 }
 
 .session-tabs > * {
-  margin-bottom: -15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+
+  /* background-color: lightcoral; */
+  height: 25px;
+
 
   color: lightgray;
   transition: 0.2s;
