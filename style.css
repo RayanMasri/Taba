@@ -2,17 +2,12 @@ body {
   background-color: gray;
 }
 
-#header {
-  border-bottom: 1px dashed rgb(221, 221, 221);
-  position: relative;
-  top: 0;
-  left: 0;
-  color: black;
-  font-weight: 500;
-  font-size: 18px;
-  font-family: "Candara";
-  padding: 0px;
-  margin: 0px;
+p {
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select:none;
+  -o-user-select:none;
+  user-select:none;
 }
 
 .session-header {
@@ -55,5 +50,7 @@ body {
 .session-tabs > *:active {
   color: white;
 }
+
+
 
 

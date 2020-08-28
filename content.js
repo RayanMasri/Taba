@@ -19,6 +19,12 @@ class Element {
         return element;
     }
 
+    // Returns the index of a child node
+    indexof(element, parent) {
+        let index = Array.from(parent.children).indexOf(element);
+        return index;
+    }
+
     delete(element) {
         element.parentNode.removeChild(element);
     }
@@ -43,22 +49,35 @@ class Tab extends Element {
         this.url = this.tab.url || this.tab.pendingUrl;
         this.domain = new URL(this.url).hostname;
         
-        [this.tabIndex, this.sessionIndex] = object.indices;
+        this.session = [object.session, object.index];
         this.onchange = object.onchange;
-        this.session = object.session;
         this.deleted = false;
+    }
+
+    remove(callback) {
+        chrome.storage.local.get(["sessions"], result => {
+            let sessions = result["sessions"] || [];
+
+            // Remove current tab
+            let [session, index] = this.session;
+            sessions[index].group.splice(this.indexof(this.element, this.parent), 1);
+
+            // Save new sessions
+            chrome.storage.local.set({"sessions": sessions}, () => {
+                callback();
+            })
+        });
     }
 
     render(parent) {  
         // Create link & link container
-        let link = this.create({ tag: "div", parent: parent })
-        let text = this.create({ tag: "p", text: this.domain, parent: link })
+        this.parent = parent;
+        this.element = this.create({ tag: "div", parent: parent });  
+                
+        let text = this.create({ tag: "p", text: this.domain, parent: this.element });
 
         // Handle left click event
         this.onleft(text, event => {
-            // Delete link
-            this.delete(link);
-
             // Get main tab
             chrome.tabs.query({ currentWindow: true, active: true }, tabs => {                
                 for(let tab of tabs) {
@@ -71,18 +90,15 @@ class Tab extends Element {
             });
 
             // Remove from storage
-            chrome.storage.local.get(["sessions"], result => {
-                let sessions = result["sessions"] || [];
+            this.remove(() => {
+                // Delete link html element
+                this.delete(this.element);
 
-                // Remove current tab
-                sessions[this.sessionIndex].group.splice(this.tabIndex, 1);
-
-                // Save new sessions
-                chrome.storage.local.set({"sessions": sessions})
+                // Log as deleted
+                let [session, index] = this.session;
+                this.deleted = true;
+                this.onchange.bind(session)();
             });
-
-            this.deleted = true;
-            this.onchange.bind(this.session)();
         })
     }
 }
@@ -101,15 +117,7 @@ class Session extends Element {
             this.delete(this.session);
 
             // Remove from storage
-            chrome.storage.local.get(["sessions"], result => {
-                let sessions = result["sessions"] || [];
-
-                // Remove current tab
-                sessions.splice(this.index, 1);
-
-                // Save new sessions
-                chrome.storage.local.set({"sessions": sessions})
-            });
+            this.remove();
         }
     }   
 
@@ -117,11 +125,23 @@ class Session extends Element {
         this.time = object.time;
         this.title = object.title;
         this.index = object.index;
-        this.group = object.group.map((tab, index) => {
-            return new Tab({ tab: tab, indices: [index, object.index], onchange: this.onchange, session: this })
+        this.group = object.group.map(tab => {
+            return new Tab({ tab: tab, index: object.index, onchange: this.onchange, session: this })
         });
     }
     
+    remove() {
+        chrome.storage.local.get(["sessions"], result => {
+            let sessions = result["sessions"] || [];
+
+            // Remove current tab
+            sessions.splice(this.index, 1);
+
+            // Save new sessions
+            chrome.storage.local.set({"sessions": sessions})
+        });
+    }
+
     render(parent) {
         // TODO: implement JSX
 
