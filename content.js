@@ -2,11 +2,15 @@ const main = chrome.extension.getURL('index.html');
 const container = document.getElementById("main-container");
 
 class Element {
-    create(object) {
+    // Creates an HTML Element 
+    create(object, attributes={}) {
+        // Create element
         let element = document.createElement(object.tag);
-        if(object.class) {
-            element.setAttribute("class", object.class);
-        }
+
+        // Add attributes
+        Object.entries(attributes).map(([key, value]) => {
+            element.setAttribute(key, value);
+        })
 
         element.innerHTML = object.text || "";
 
@@ -19,6 +23,11 @@ class Element {
         return element;
     }
 
+    // Deletes an HTML Element
+    destroy(element) {
+        element.parentNode.removeChild(element);
+    }
+
     // Returns the index of a child node
     indexof(element, parent) {
         console.log(element.parentNode);
@@ -26,79 +35,130 @@ class Element {
         return index;
     }
 
-    delete(element) {
-        element.parentNode.removeChild(element);
-    }
-
+    // Handles left click
     onleft(element, callback) {
-        element.addEventListener("mouseup", event => {
+        element.addEventListener("click", event => {
             if(event.which == 1) {
                 callback(event);
             }
         })
     } 
+
+    // Handles hover in
+    onover(element, callback) {
+        element.addEventListener("mouseover", event => {
+            callback(event);
+        })
+    }
+
+    // Handles hover out
+    onout(element, callback) {
+        element.addEventListener("mouseout", event => {
+            callback(event);
+        })
+    }
 }
 
 class Tab extends Element {
     constructor(object) {
         super();
-        this.load(object);
-    }
-
-    load(object) {
-        this.tab = object.tab;
-        this.url = this.tab.url || this.tab.pendingUrl;
-        this.domain = new URL(this.url).hostname;
-        
         this.session = [object.session, object.index];
         this.onchange = object.onchange;
+        this.tab = object.tab;
+
+        // Get URL and domain name
+        this.url = this.tab.url || this.tab.pendingUrl;
+        this.domain = new URL(this.url).hostname;
+
+        // Get favicon
+        this.icon = "https://www.google.com/s2/favicons?domain=" + this.domain;      
+
         this.deleted = false;
     }
 
-    remove(callback) {
+    // Restores this Tab
+    restore() {
+        chrome.tabs.query({ currentWindow: true, active: true }, tabs => {                
+            // Get Taba tab
+            for(let tab of tabs) {
+                // Create a new tab with this Tab instance's url
+                chrome.tabs.create({ url: this.url, index: 1 });
+
+                // Focus back on Taba tab
+                chrome.tabs.update(tab.id, { active: true });                                    
+            }
+            // callback();
+        });
+    }
+    
+    // Removes this Tab from the current session storage
+    remove() {
+        // Load sessions
         chrome.storage.local.get(["sessions"], result => {
             let sessions = result["sessions"] || [];
 
-            // Remove current tab
+            // Remove tab from storage array
             let [session, index] = this.session;
-            sessions[index].group.splice(this.indexof(this.element), 1);
+            sessions[index].group.splice(this.indexof(this.container), 1);
 
-            // Save new sessions
+            // Save new storage array
             chrome.storage.local.set({"sessions": sessions}, () => {
-                callback();
-            })
+                // Destroy link html element
+                this.destroy(this.container);
+                this.deleted = true;
+
+                // Call this session's onchange
+                let [session, _] = this.session;
+                this.onchange.bind(session)();
+
+                // callback();
+            });
         });
     }
 
+    // Renders the Tab instance into an HTML Element
     render(parent) {  
-        // Create link & link container
-        this.element = this.create({ tag: "div", parent: parent });  
-                
-        let text = this.create({ tag: "p", text: this.domain, parent: this.element });
+        // Create this Tab instance's container
+        this.container = this.create({ tag: "div", parent: parent });  
+    
+        // Create close image
+        let close = this.create({ tag: "img", parent: this.container }, {
+            src: "./assets/close.png",
+            class: "tab-delete"
+        })
 
-        // Handle left click event
-        this.onleft(text, event => {
-            // Get main tab
-            chrome.tabs.query({ currentWindow: true, active: true }, tabs => {                
-                for(let tab of tabs) {
-                    // Show this.tab
-                    chrome.tabs.create({ url: this.url, index: 1 });
 
-                    // Focus on main tab
-                    chrome.tabs.update(tab.id, { active: true });                                    
-                }
-            });
+        // Create icon
+        this.create({ tag: "img", parent: this.container }, {
+            src: this.icon,
+        })
+        
+        // Create a text element containing this instance's domain name
+        let text = this.create({ tag: "p", text: this.domain, parent: this.container });
+        
+        // Handle mouse over on close image
+        this.onover(this.container, () => {
+            close.style.visibility = "visible";
+        })
+
+        // Handle mouse out on close image
+        this.onout(this.container, () => {
+            close.style.visibility = "hidden";
+        })
+
+        // Handle left click on close image
+        this.onleft(close, () => {
+            // Remove from storage
+            this.remove();
+        })
+
+        // Handle left click event on the text element
+        this.onleft(text, () => {
+            // Restore this Tab instance
+            this.restore();
 
             // Remove from storage
-            this.remove(() => {
-                // Delete link html element
-                this.delete(this.element);
-
-                // Log as deleted
-                let [session, index] = this.session;
-                this.deleted = true;
-                this.onchange.bind(session)();
-            });
+            this.remove();
         })
     }
 }
@@ -106,30 +166,38 @@ class Tab extends Element {
 class Session extends Element {
     constructor(object) {
         super();
-        this.load(object);
-    }
+        this.group = object.group.map(tab => {
+            return new Tab({ tab: tab, index: object.index, onchange: this.onchange, session: this })
+        });
+        this.time = object.time;
+        this.index = object.index;
+        this.getcount();
+    }    
 
+    // Called when a tab is removed/restored from a session
     onchange(tab) {        
+        // Update count
+        this.getcount();
+        this.title.innerHTML = this.count; 
+
         // Check if session is still active by finding if there is an active tab
         let alive = this.group.find(tab => !tab.deleted);
         if(!alive) {
             // Delete the session element
-            this.delete(this.session);
+            this.destroy(this.session);
 
             // Remove from storage
             this.remove();
         }
     }   
 
-    load(object) {        
-        this.time = object.time;
-        this.title = object.title;
-        this.index = object.index;
-        this.group = object.group.map(tab => {
-            return new Tab({ tab: tab, index: object.index, onchange: this.onchange, session: this })
-        });
+    // Updates session tab count
+    getcount() {
+        let value = this.tabs ? this.tabs.children.length : this.group.length;
+        this.count = `${value} tab${value > 1 ? "s" : ""}`;
     }
-    
+
+    // Removes session from sessions storage
     remove() {
         chrome.storage.local.get(["sessions"], result => {
             let sessions = result["sessions"] || [];
@@ -142,23 +210,22 @@ class Session extends Element {
         });
     }
 
+    // Renders the Session instance into an HTML Element
     render(parent) {
-        // TODO: implement JSX
-
         // Create session container
-        let session = this.create({ tag: "div", class: "session", parent: parent, first: true });
+        let session = this.create({ tag: "div", parent: parent, first: true }, { class: "session" });
         this.session = session;
 
         // Create info (date & title)
-        let info = this.create({ tag: "div", class: "session-header", parent: session });
-        this.create({ tag: "p", class: "session-title", text: this.title, parent: info});
-        this.create({ tag: "p", class: "session-date", text: this.time, parent: info });
+        let info = this.create({ tag: "div", parent: session }, { class: "session-header" });
+        this.title = this.create({ tag: "p", text: this.count, parent: info}, { class: "session-title" });
+        this.create({ tag: "p", text: this.time, parent: info }, { class: "session-date" });
 
         // Create tabs container
-        let tabs = this.create({ tag: "div", class: "session-tabs", parent: session });
+        this.tabs = this.create({ tag: "div", parent: session }, { class: "session-tabs" });
 
         // Create tabs
-        this.group.map(tab => tab.render(tabs));
+        this.group.map(tab => tab.render(this.tabs));
     }
 }
 
@@ -172,7 +239,6 @@ chrome.storage.local.get(["sessions"], result => {
         session = new Session({
             group: session.group,
             time: session.time,
-            title: session.title,
             index: index
         });
 

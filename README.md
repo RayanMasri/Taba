@@ -7,6 +7,7 @@ Things to add:
 - Drag and drop from session to session
 - Drag and drop from tab to tab within session 
 - Merging sessions
+- JSX
 
 Things to fix:
 - When reloading an existing Taba tab retain scroll value

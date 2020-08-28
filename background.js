@@ -29,18 +29,13 @@ chrome.browserAction.onClicked.addListener(() => {
                 chrome.tabs.remove(tab.id);
 
                 // Check if tab isn't a new tab
-                if(url != "chrome://newtab") {
+                if(url != "chrome://newtab/") {
                     // Collect the tab
                     return tab;
                 }
             }
         })     
         
-        // group.map((tab, index) => {
-        //     let domain = new URL(tab.url || tab.pendingUrl).hostname;
-        //     console.log(`Tab ${domain} at index ${index}`);
-        // })
-
         // Check if group isn't empty
         if(group.length) {
             // Load local sessions
@@ -57,13 +52,12 @@ chrome.browserAction.onClicked.addListener(() => {
                     month: date.getMonth() + 1,
                     year: date.getFullYear()
                 }
-                time = `${time.hours}:${time.minutes} ${time.period} ${time.month}/${time.day}/${time.year}`;
-    
+                time = `${time.hours}:${time.minutes} ${time.period} ${time.day}/${time.month}/${time.year}`;
+                
                 // Push current session
                 sessions.push({
                     group: group,
-                    time: time,
-                    title: "title"  
+                    time: time
                 });
     
                 // Save current sessions
