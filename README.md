@@ -8,6 +8,9 @@ Things to add:
 - Drag and drop from tab to tab within session 
 - Merging sessions
 - JSX
+- Reference rendered elements using class names in a class array
+- Nested attributes
+- Sort sessions by favorite immediately
 
 Things to fix:
 - When reloading an existing Taba tab retain scroll value

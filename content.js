@@ -1,5 +1,5 @@
 const main = chrome.extension.getURL('index.html');
-const container = document.getElementById("main-container");
+const container = document.getElementById("sessions");
 
 class Element {
     // Creates an HTML Element 
@@ -9,7 +9,13 @@ class Element {
 
         // Add attributes
         Object.entries(attributes).map(([key, value]) => {
-            element.setAttribute(key, value);
+            if(key == "style") {
+                Object.entries(value).map(([key, value]) => {
+                    element.setAttribute("style", `${key}: ${value};`);
+                })
+            } else {
+                element.setAttribute(key, value);
+            }
         })
 
         element.innerHTML = object.text || "";
@@ -39,6 +45,17 @@ class Element {
     onleft(element, callback) {
         element.addEventListener("click", event => {
             if(event.which == 1) {
+                event.preventDefault();
+                callback(event);
+            }
+        })
+    } 
+    
+    // Handles middle click
+    onmiddle(element, callback) {
+        element.addEventListener("click", event => {
+            if(event.which == 2) {
+                event.preventDefault();
                 callback(event);
             }
         })
@@ -127,7 +144,6 @@ class Tab extends Element {
             class: "tab-delete"
         })
 
-
         // Create icon
         this.create({ tag: "img", parent: this.container }, {
             src: this.icon,
@@ -136,30 +152,20 @@ class Tab extends Element {
         // Create a text element containing this instance's domain name
         let text = this.create({ tag: "p", text: this.domain, parent: this.container });
         
-        // Handle mouse over on close image
-        this.onover(this.container, () => {
-            close.style.visibility = "visible";
-        })
+        // Handle events on close button
+        this.onover(this.container, () => close.style.visibility = "visible");
+        this.onout(this.container, () => close.style.visibility = "hidden");
+        this.onleft(close, () => this.remove())
 
-        // Handle mouse out on close image
-        this.onout(this.container, () => {
-            close.style.visibility = "hidden";
-        })
-
-        // Handle left click on close image
-        this.onleft(close, () => {
-            // Remove from storage
-            this.remove();
-        })
-
-        // Handle left click event on the text element
+        // Handle events on link element
+        // Left Button Click
         this.onleft(text, () => {
-            // Restore this Tab instance
             this.restore();
-
-            // Remove from storage
             this.remove();
         })
+
+        // Middle Button Click
+        this.onmiddle(text, () => this.restore());
     }
 }
 
@@ -171,8 +177,28 @@ class Session extends Element {
         });
         this.time = object.time;
         this.index = object.index;
+        this.favorite = object.favorite;
         this.getcount();
     }    
+
+    getstar() {
+        return this.favorite ? "./assets/star-fill.png" : "./assets/star-empty.png";
+    }
+
+    setfavorite(condition) {
+        this.favorite = condition;
+
+        chrome.storage.local.get(["sessions"], result => {
+            let sessions = result["sessions"] || [];
+
+            // Remove current tab
+            console.log(this.index);
+            sessions[this.index].favorite = this.favorite;
+
+            // Save new sessions
+            chrome.storage.local.set({"sessions": sessions})
+        });
+    }
 
     // Called when a tab is removed/restored from a session
     onchange(tab) {        
@@ -217,9 +243,23 @@ class Session extends Element {
         this.session = session;
 
         // Create info (date & title)
-        let info = this.create({ tag: "div", parent: session }, { class: "session-header" });
-        this.title = this.create({ tag: "p", text: this.count, parent: info}, { class: "session-title" });
-        this.create({ tag: "p", text: this.time, parent: info }, { class: "session-date" });
+        let header = this.create({ tag: "div", parent: session }, { class: "session-header" });
+        this.title = this.create({ tag: "p", text: this.count, parent: header}, { class: "session-title" });
+        this.create({ tag: "p", text: this.time, parent: header }, { class: "session-date" });
+        this.star = this.create({ tag: "img", parent: header }, {
+            src: this.getstar(),
+            style: {
+                visibility: this.favorite ? "visible" : "hidden"
+            }
+        });
+
+        this.onleft(this.star, () => {
+            this.setfavorite(!this.favorite);
+            this.star.src = this.getstar();
+        });
+
+        this.onover(header, () => this.star.style.visibility = "visible");
+        this.onout(header, () => this.star.style.visibility = this.favorite ? "visible" : "hidden");
 
         // Create tabs container
         this.tabs = this.create({ tag: "div", parent: session }, { class: "session-tabs" });
@@ -233,16 +273,35 @@ class Session extends Element {
 chrome.storage.local.get(["sessions"], result => {
     let sessions = result["sessions"] || [];
 
-    // Iterate through sessions
-    sessions.map((session, index) => {    
-        // Unpack session
+    // Unpack sessions
+    sessions = sessions.map((session, index) => {
+        return {
+            group: session.group,
+            time: session.time,
+            favorite: session.favorite,
+            index: index
+        };
+    });
+    
+
+    // Sort sessions by favorite
+    sessions = sessions.sort((x, y) => {
+        return (x.favorite === y.favorite) ? 0 : x.favorite ? 1 : -1;
+    })
+
+    // Render sessions
+    sessions.map((session) => {
         session = new Session({
             group: session.group,
             time: session.time,
-            index: index
-        });
+            favorite: session.favorite,
+            index: session.index
+        })
 
-        // Render session
         session.render(container);
-    })
+
+        console.log(session);
+    });
+    
+    
 })

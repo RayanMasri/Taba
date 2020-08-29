@@ -57,7 +57,8 @@ chrome.browserAction.onClicked.addListener(() => {
                 // Push current session
                 sessions.push({
                     group: group,
-                    time: time
+                    time: time,
+                    favorite: false
                 });
     
                 // Save current sessions
