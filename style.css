@@ -1,13 +1,18 @@
-body {
-  background-color: gray;
-}
-
-p {
+* {
   -moz-user-select: none;
   -webkit-user-select: none;
   -ms-user-select:none;
   -o-user-select:none;
   user-select:none;
+  -moz-user-drag: none;
+  -webkit-user-drag: none;
+  -ms-user-drag:none;
+  -o-user-drag:none;
+  user-select:none;
+}
+
+body {
+  background-color: gray;
 }
 
 /* S */
@@ -76,6 +81,16 @@ p {
 /* Session Header Title/Date/Star */
 .session-header > * {
   padding-right: 5px;
+}
+
+/* Session Header Star */
+.session-header > img {
+  opacity: 1;
+  transition: 0.2s;
+  display: none;
+}
+.session-header > img:hover {
+  opacity: 0.5;
 }
 
 /* Session Header Title */
