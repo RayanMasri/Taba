@@ -11,4 +11,3 @@ Things to add:
 Things to fix:
 - When reloading an existing Taba tab retain scroll value
 - Favorites
-- Multiple tabs restored

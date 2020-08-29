@@ -27,6 +27,11 @@ HTMLElement.prototype.onout = function(callback) {
     })
 }
 
+// Gets index of html element according to parent
+HTMLElement.prototype.indexof = function() {
+    return Array.from(this.parentNode.children).indexOf(this);
+}
+
 class Element {
     insert(template, parent) {
         // Create element
@@ -65,7 +70,6 @@ class Tab extends Element {
         this.session = object.session;
         this.onchange = object.onchange;
         this.tab = object.tab;
-        this.indices = object.indices;
 
         // Get URL and domain name
         this.url = this.tab.url || this.tab.pendingUrl;
@@ -97,10 +101,12 @@ class Tab extends Element {
         chrome.storage.local.get(["sessions"], result => {
             let sessions = result["sessions"] || [];
 
-            let [session, tab] = this.indices;
+            // ********** Error handling response: TypeError: Cannot read property 'group' of undefined
+            // at <URL>
+            let [session, index] = this.session;
             
             // Remove tab from storage array
-            sessions[session].group.splice(tab, 1);
+            sessions[index].group.splice(this.container.indexof(), 1);
 
             // Save new storage array
             chrome.storage.local.set({"sessions": sessions}, () => {
@@ -109,7 +115,7 @@ class Tab extends Element {
                 this.deleted = true;
 
                 // Call this session's onchange
-                this.onchange.bind(this.session)();
+                this.onchange.bind(session)();
             });
         });
     }
@@ -141,12 +147,12 @@ class Session extends Element {
     constructor(object) {
         super();
         this.group = object.group.map((tab, index) => {            
-            return new Tab({ tab: tab, indices: [object.index, index], onchange: this.onchange, session: this })
+            return new Tab({ tab: tab, session: [this, object.index], onchange: this.onchange })
         });
+        this.date = object.date;
         this.time = object.time;
         this.index = object.index;
         this.favorite = object.favorite;
-        this.getcount();
     }    
 
     getstar() {
@@ -169,25 +175,24 @@ class Session extends Element {
 
     // Called when a tab is removed/restored from a session
     onchange(tab) {        
-        // // Update count
-        // this.getcount();
-        // this.title.innerHTML = this.count; 
+        // Update tab title to match tab count
+        this.references.title.innerHTML = `${this.references.tabs.children.length} tabs`; 
 
-        // // Check if session is still active by finding if there is an active tab
-        // let alive = this.group.find(tab => !tab.deleted);
-        // if(!alive) {
-        //     // Delete the session element
-        //     this.destroy(this.session);
+        // Check if session is still active by finding if there is an active tab
+        let alive = this.group.find(tab => !tab.deleted);
 
-        //     // Remove from storage
-        // this.remove();
-        // }
+        if(!alive) {
+            // Delete the session element
+            this.destroy(this.references.session);
+
+            // Remove from storage
+            this.remove();
+        }
     }   
 
     // Updates session tab count
     getcount() {
-        let value = this.tabs ? this.tabs.children.length : this.group.length;
-        this.count = `${value} tab${value > 1 ? "s" : ""}`;
+        ;
     }
 
     // Removes session from sessions storage
@@ -206,18 +211,19 @@ class Session extends Element {
     // Renders the Session instance into an HTML Element
     render(parent) {
         let {_, references} = this.insert(`
-            <div class="session">
+            <div class="session" ref="session">
                 <div class="session-header" ref="header">
-                    <p class="session-title">${this.group.length} tabs</p>
+                    <p class="session-title" ref="title">${this.group.length} tabs</p>
                     <p class="session-date">${this.time}</p>
                     <img src=${this.getstar()} ref="star"></img>
                 </div>
-                <div class="session-tabs" ref="tabs"> 
-                                      
-                </div>
+                <div class="session-tabs" ref="tabs"></div>
             </div>
         `, parent);
 
+        this.references = references;
+
+        // Rendere all tabs
         this.group.map(tab => tab.render(references.tabs));
 
         references.star.onleft(() => {
@@ -236,26 +242,37 @@ chrome.storage.local.get(["sessions"], result => {
         return {
             group: session.group,
             time: session.time,
-            favorite: session.favorite
+            favorite: session.favorite,
+            date: session.date
         };
     });
     
 
-    // Sort sessions by favorited & date
+    // Sort sessions by date
     sessions = sessions.sort((x, y) => {
-        return (x.favorite === y.favorite) ? 0 : x.favorite ? 1 : -1;
-    }).reverse();
-
-
-    // Render sessions
-    sessions.map((session, index) => {
-        session = new Session({
-            group: session.group,
-            time: session.time,
-            favorite: session.favorite,
-            index: sessions.length - index - 1
-        })
-
-        session.render(container);
+        return (x.date - y.date > 0 ? -1 : 1);
     });
+
+    // Sort sessions by favorited
+    sessions = sessions.sort((x, y) => {
+        return (x.favorite === y.favorite) ? 0 : x.favorite ? -1 : 1;
+    });
+
+    chrome.storage.local.set({sessions: sessions}, () => {
+        // Render sessions
+        sessions.map((session, index) => {
+            session = new Session({
+                group: session.group,
+                time: session.time,
+                favorite: session.favorite,
+                date: session.date,
+                index: index
+            })
+
+            session.render(container);
+
+            console.log(`${session.group.length} tabs at index ${index}`);
+        });
+    });
+
 })

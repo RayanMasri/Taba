@@ -58,6 +58,7 @@ chrome.browserAction.onClicked.addListener(() => {
                 sessions.push({
                     group: group,
                     time: time,
+                    date: date.getTime(),
                     favorite: false
                 });
     

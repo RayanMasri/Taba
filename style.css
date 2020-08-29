@@ -87,7 +87,6 @@ body {
 .session-header > img {
   opacity: 1;
   transition: 0.2s;
-  display: none;
 }
 .session-header > img:hover {
   opacity: 0.5;
