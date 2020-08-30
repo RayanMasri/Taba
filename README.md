@@ -1,7 +1,5 @@
 Things to add:
 
-- Add the favicon of each link
-- Add x next to each link to delete the link
 - Each session has a "delete" option to delete the session
 - Each session has a "restore" option to restore the links back to tabs
 - Drag and drop from session to session
@@ -9,5 +7,5 @@ Things to add:
 - Merging sessions
 
 Things to fix:
-- When reloading an existing Taba tab retain scroll value
+- Removing a session/tab after removing a single session
 - Favorites

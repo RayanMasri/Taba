@@ -43,13 +43,6 @@ body {
   justify-content: center;
   height: 25px;
   color: lightgray;
-  transition: 0.2s;
-}
-.session-tabs > *:hover {
-  color: white;
-}
-.session-tabs > *:active {
-  color: white;
 }
 
 /* Session Tabs Close/Favicon */
@@ -65,6 +58,18 @@ body {
   visibility: hidden;
 }
 
+
+
+/* Session Header Tools Star/Close*/
+.session-tools > * {
+  opacity: 1;
+  padding-left: 5px;  
+  transition: 0.2s;
+}
+.session-tools > *:hover {
+  opacity: 0.5;
+}
+
 /* Session Tabs Close/Favicon/Domain */
 .session-tabs > * > * {
   padding-right: 5px;
@@ -74,22 +79,34 @@ body {
 .session-header {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   height: 25px;
+  /* background-color: green; */
 }
 
-/* Session Header Title/Date/Star */
-.session-header > * {
+.session-data {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  height: 25px;
+
+  /* background-color: yellow; */
+}
+
+.session-data > * {
   padding-right: 5px;
 }
 
-/* Session Header Star */
-.session-header > img {
-  opacity: 1;
-  transition: 0.2s;
-}
-.session-header > img:hover {
-  opacity: 0.5;
+/* Session Header Tools */
+.session-tools {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 25px;
+  /* background-color: red; */
 }
 
 /* Session Header Title */
