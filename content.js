@@ -1,3 +1,16 @@
+// session object format
+// {
+//     group: "an array of chrome tabs defaults to []",
+//     date: "a javascript date object defaults to undefined",
+//     favorite: "a boolean defaults to false",
+//     shown: "a boolean defaults to true"
+// }
+
+// $.post('https://file.io/', {text: "hello"}, function(data, status) {
+//     console.log(data);  
+// })
+
+
 const main = chrome.extension.getURL('index.html');
 const container = document.getElementById("sessions");
 
@@ -11,11 +24,21 @@ HTMLElement.prototype.onleft = function(callback) {
     })
 }
 
+// Handles middle click event on an HTML element
+HTMLElement.prototype.onmiddle = function(callback) {
+    this.addEventListener("mouseup", event => {
+        if(event.which == 2) {
+            event.preventDefault();
+            callback(event);
+        }
+    })
+}
+
 // Handles mouse over event on an HTML Element
 HTMLElement.prototype.onover = function(callback) {
     this.addEventListener("mouseover", event => {
         event.preventDefault();
-        callback(event);
+        callback(event);       
     })
 }
 
@@ -83,16 +106,18 @@ class Tab extends Element {
 
     // Restores this Tab
     restore() {
-        chrome.tabs.query({ currentWindow: true, active: true }, tabs => {                
-            // Get Taba tab
-            for(let tab of tabs) {
-                // Create a new tab with this Tab instance's url
-                chrome.tabs.create({ url: this.url, index: 1 });
-
-                // Focus back on Taba tab
-                chrome.tabs.update(tab.id, { active: true });                                    
-            }
-        });
+        if(!this.deleted) {
+            chrome.tabs.query({ currentWindow: true, active: true }, tabs => {                
+                // Get Taba tab
+                for(let tab of tabs) {
+                    // Create a new tab with this Tab instance's url
+                    chrome.tabs.create({ url: this.url, index: tab.index + 1});
+    
+                    // Focus back on Taba tab
+                    chrome.tabs.update(tab.id, { active: true });                                    
+                }
+            });
+        }
     }
     
     // Removes this Tab from the current session storage
@@ -103,7 +128,7 @@ class Tab extends Element {
 
             let [session, tab] = [
                 this.session.references.session.indexof(),
-                this.container.indexof()
+                this.references.tab.indexof()
             ];
 
             // Remove tab from storage array
@@ -112,7 +137,7 @@ class Tab extends Element {
             // Save new storage array
             chrome.storage.local.set({"sessions": sessions}, () => {
                 // Destroy link html element
-                this.destroy(this.container);
+                this.destroy(this.references.tab);
                 this.deleted = true;
 
                 // Call this session's onchange
@@ -123,24 +148,55 @@ class Tab extends Element {
 
     // Renders the Tab instance into an HTML Element
     render(parent) {  
+        // let {_, references} = this.insert(`
+        //     <div ref="container">
+        //         <img src="./assets/close.png" class="tab-delete" ref="close"></img>
+        //         <img src=${this.icon}></img>
+        //         <p ref="text">${this.domain}</p>
+        //     </div>
+        // `, parent);
         let {_, references} = this.insert(`
-            <div ref="container">
-                <img src="./assets/close.png" class="tab-delete" ref="close"></img>
-                <img src=${this.icon}></img>
-                <p ref="text">${this.domain}</p>
+            <div class="session-tab" ref="tab">
+                <div class="session-tab-data">
+                    <div class="session-tab-icon">
+                        <img src=${this.icon}>
+                    </div>
+                    <div class="session-tab-name">
+                        <div>${this.domain}</div>
+                    </div>
+                </div>
+                <div class="session-tab-date">
+                    <div>${this.session.time}</div>
+                </div>
+                <div class="session-tab-close" ref="close">
+                    <img src="./assets/ic_close_48px.png">
+                </div>  
             </div>
         `, parent);
 
-        references.text.onleft(() => {
+        this.references = references;
+
+        this.references.close.onleft((event) => {
+            event.stopPropagation();
+            this.remove();
+        })
+        
+        this.references.tab.onleft(() => {
             this.restore();
             this.remove();
         })
 
-        references.container.onover(() => references.close.style.visibility = "visible");
-        references.container.onout(() => references.close.style.visibility = "hidden");        
-        references.close.onleft(() => this.remove());
+        this.references.tab.onmiddle(() => {
+            this.restore();
+        })
+        // references.text.onleft(() => {
+        //     this.restore();
+        //     this.remove();
+        // })
 
-        this.container = references.container;
+        // references.container.onover(() => references.close.style.visibility = "visible");
+        // references.container.onout(() => references.close.style.visibility = "hidden");        
+        // references.close.onleft(() => this.remove());
     }
 }
 
@@ -176,9 +232,6 @@ class Session extends Element {
 
     // Called when a tab is removed/restored from a session
     onchange(tab) {   
-        // Update tab title to match tab count
-        this.references.title.innerHTML = `${this.references.tabs.children.length} tabs`; 
-
         // Check if session is still active by finding if there is an active tab
         let alive = this.group.find(tab => !tab.deleted);
 
@@ -188,6 +241,9 @@ class Session extends Element {
                 // Delete the session element
                 this.destroy(this.references.session);
             });
+        } else {
+            // Update tab title to match tab count
+            this.references.title.innerHTML = `${this.references.tabs.children.length} tabs`; 
         }
     }   
 
@@ -211,37 +267,61 @@ class Session extends Element {
     render() {
         let {_, references} = this.insert(`
             <div class="session" ref="session">
-                <div class="session-header" ref="header">
-                    <div class="session-data">
-                        <p class="session-title" ref="title">${this.group.length} tabs</p>
-                        <p class="session-date">${this.time}</p>
+                <div class="session-header">
+                    <div class="session-title-container">
+                        <div class="session-title" ref="title">${this.group.length} tabs</div>
                     </div>
-                    <div class="session-tools" ref="tools">
-                        <img src=${this.getstar()} ref="star"></img>
-                        <img src="./assets/close.png" ref="close"></img>
+                    <div class="session-actions">
+                        <div class="session-action-restore" ref="restore">
+                            <img src="./assets/ic_refresh_48px.png">
+                        </div>  
+                        <div class="session-action-close" ref="remove">
+                            <img src="./assets/ic_close_48px.png">
+                        </div>  
+                        <div class="session-action-hide">
+                            <img src="./assets/ic_keyboard_arrow_down_48px.png">
+                        </div>      
+                        <div class="session-action-favourite">
+                            <img src="./assets/favourite-31-2.png">
+                        </div>  
                     </div>
                 </div>
-                <div class="session-tabs" ref="tabs"></div>
+                <div class="session-tabs" ref="tabs"/>
             </div>
-        `, container);
+        `, container)
+
 
         this.references = references;
 
         // Render all tabs
         this.group.map(tab => tab.render(references.tabs));
 
-        references.star.onleft(() => {
-            this.setfavorite(!this.favorite);
-            references.star.src = this.getstar();
-        })     
-        
-        references.close.onleft(() => {
+        this.references.remove.onleft(() => {
             // Remove from storage
             this.remove(() => {
                 // Delete the session element
                 this.destroy(this.references.session);
             }); 
         })
+
+        this.references.restore.onleft(() => {
+            this.group.map((tab) => {
+                tab.restore();
+                tab.remove();
+            })
+        })
+        // references.star.onleft(() => {
+        //     this.setfavorite(!this.favorite);
+        //     references.star.src = this.getstar();
+        // })     
+        
+        // references.close.onleft(() => {
+        //     // Remove from storage
+        //     this.remove(() => {
+        //         // Delete the session element
+        //         this.destroy(this.references.session);
+        //     }); 
+        // })
     }
 }
 
@@ -287,8 +367,3 @@ chrome.storage.local.get(["sessions"], result => {
         });
     });
 })
-
-document.getElementById("test").addEventListener("click", function() {
-    chrome.storage.local.set({"sessions": []});
-    window.location.reload();
-});

@@ -1,5 +1,29 @@
 const main = chrome.extension.getURL('index.html');
 
+
+// Handle context menus
+let menus = [];
+const createMenu = (object) => {
+    menus.push({id: object.id||object.title, callback: object.click||undefined})
+    chrome.contextMenus.create({title: object.title, id: object.id||object.title, parentId: object.father||undefined});
+}
+chrome.contextMenus.onClicked.addListener(info => menus.find(menu => menu.id == info.menuItemId).callback());
+
+createMenu({title: "taba"});
+createMenu({title: "remove all", father: "taba", click: () => {
+    chrome.storage.local.set({"sessions": []}, () => {
+        chrome.tabs.query({currentWindow: true}, tabs => {
+            tabs.map(tab => {
+                let url = tab.url || tab.pendingUrl;
+                if(url == main) {
+                    chrome.tabs.reload(tab.id);
+                }
+            })
+        })
+    })
+}});
+
+// Handle click on icon
 chrome.browserAction.onClicked.addListener(() => {
 	// Get all tabs in all windows
     chrome.tabs.query({currentWindow: true}, tabs => {
@@ -11,7 +35,7 @@ chrome.browserAction.onClicked.addListener(() => {
 
 		if(!maintab) {
             // If main doesn't exist, create it
-			chrome.tabs.create({url: main, index: 0});
+			chrome.tabs.create({url: main, index: tabs.length - 1});
 		} else {
             // If main exists, reload it
             chrome.tabs.reload(maintab.id);
@@ -50,8 +74,7 @@ chrome.browserAction.onClicked.addListener(() => {
                     month: date.getMonth() + 1,
                     year: date.getFullYear()
                 }
-                time = `${time.hours}:${time.minutes} ${time.period} ${time.day}/${time.month}/${time.year}`;
-                
+                time = `${time.month}/${time.day}/${time.year} ${time.hours}:${time.minutes} ${time.period}`;
                 // Push current session
                 sessions.push({
                     group: group,
